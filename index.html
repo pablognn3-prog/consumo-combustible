@@ -1,92 +1,127 @@
 <!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MI RUTA - Consumo</title>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MI RUTA</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0f172a;color:#fff;padding:14px}
-.card{background:#1e293b;border-radius:16px;padding:16px;margin-bottom:12px}
-h1{margin:0;font-size:22px}h1 span{color:#facc15}
-input,select{width:100%;padding:12px;border-radius:10px;border:0;margin:6px 0;background:#0f172a;color:#fff;border:1px solid #334155}
-button{width:100%;padding:13px;border:0;border-radius:12px;font-weight:800;cursor:pointer}
-.btn-y{background:#facc15;color:#000}.btn-w{background:#fff;color:#000}.btn-r{background:#ef4444;color:#fff;margin-top:8px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#0f172a;border-radius:12px;padding:12px;text-align:center}.stat b{font-size:20px;color:#facc15;display:block}
-.item{background:#0f172a;border-radius:12px;padding:12px;margin:8px 0;display:flex;justify-content:space-between}
-small{color:#94a3b8}#login{text-align:center;padding:30px 10px}
-</style></head>
+body{font-family:system-ui,Arial,sans-serif;background:#f2f4f7;margin:0;padding:16px;color:#111}
+.card{background:#fff;border-radius:16px;padding:18px;max-width:480px;margin:0 auto;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+h1{text-align:center;margin:6px 0 2px}
+p.sub{text-align:center;color:#666;margin:0 0 16px}
+button{width:100%;padding:13px;border:0;border-radius:12px;background:#111;color:#fff;font-size:16px;cursor:pointer;margin-top:10px}
+button.google{background:#fff;color:#111;border:1px solid #ddd}
+input{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:8px;box-sizing:border-box;font-size:16px}
+.hidden{display:none}
+.item{background:#f7f8fa;border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
+.small{font-size:13px;color:#666;text-align:center;margin-top:10px}
+#msg{color:#c00;text-align:center;font-size:14px;margin-top:10px}
+</style>
+</head>
 <body>
-<div id="login" class="card">
-<h1>⛽ MI <span>RUTA</span></h1><p>Tu consumo guardado con Gmail, no se pierde nunca.</p>
-<p id="userInfo">No iniciaste sesión</p>
-<button class="btn-y" id="btnGoogle">Entrar con Google 📧</button>
-<p><small>Usá el mismo Gmail en el celu y en la compu.</small></p>
+<div class="card">
+  <h1>MI RUTA</h1>
+  <p class="sub">Control de consumo</p>
+
+  <div id="loginBox">
+    <button class="google" id="btnGoogle">Entrar con Google</button>
+    <div id="msg"></div>
+    <p class="small">Si se abre una ventana blanca, volvé acá y apretá de nuevo.</p>
+  </div>
+
+  <div id="appBox" class="hidden">
+    <p id="userName" style="text-align:center"></p>
+    <input id="km" type="number" placeholder="Km recorridos Ej: 120">
+    <input id="litros" type="number" placeholder="Litros cargados Ej: 10">
+    <input id="precio" type="number" placeholder="Precio por litro Ej: 1300 (opcional)">
+    <button id="btnGuardar">Guardar viaje</button>
+    <div id="lista"></div>
+    <button id="btnSalir" style="background:#eee;color:#111">Salir</button>
+  </div>
 </div>
 
-<div id="app" style="display:none">
-<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><h1>⛽ MI <span>RUTA</span></h1><small id="emailShow"></small><br><small id="status">● Sincronizado con la nube</small></div><button id="btnSalir" style="width:auto;padding:8px 12px" class="btn-r">Salir</button></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // CONFIG NUEVA - MI RUTA CONSUMO
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtE7xSCMKB5jgW3yXv7fwAEVvLDW4RLlw",
+    authDomain: "mi-ruta-eb2c3.firebaseapp.com",
+    projectId: "mi-ruta-eb2c3",
+    storageBucket: "mi-ruta-eb2c3.firebasestorage.app",
+    messagingSenderId: "252338478970",
+    appId: "1:252338478970:web:9fc6aabbd0fcb0d0bdc0c3",
+    measurementId: "G-1FSD6BBM3V"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
 
-<div class="card"><h3>➕ Nueva carga</h3>
-<label>Fecha</label><input type="date" id="fecha">
-<label>Kilómetros actuales</label><input type="number" id="km" placeholder="Ej: 125400">
-<label>Litros</label><input type="number" id="litros" step="0.01" placeholder="Ej: 42.5">
-<label>Total pagado $</label><input type="number" id="total" placeholder="Ej: 65000">
-<label>Estación / Nafta</label><select id="estacion"><option>YPF - Súper</option><option>YPF - Infinia</option><option>Shell - Súper</option><option>Shell - V-Power</option><option>Axion - Súper</option><option>Axion - Quantium</option><option>Puma</option><option>Otra</option></select>
-<button class="btn-y" id="btnGuardar">💾 Guardar carga</button></div>
+  const loginBox = document.getElementById('loginBox');
+  const appBox = document.getElementById('appBox');
+  const msg = document.getElementById('msg');
 
-<div class="grid"><div class="stat"><span>Total gastado</span><b id="sTotal">$0</b></div><div class="stat"><span>Total litros</span><b id="sLitros">0 L</b></div><div class="stat"><span>Km recorridos</span><b id="sKm">0 km</b></div><div class="stat"><span>Consumo prom.</span><b id="sCons">- km/L</b></div></div>
+  document.getElementById('btnGoogle').onclick = async () => {
+    msg.textContent = "";
+    try {
+      await auth.signInWithPopup(provider);
+    } catch(e) {
+      // Si el celu bloquea el popup, usa redirect
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        await auth.signInWithRedirect(provider);
+      } else {
+        msg.textContent = "Error: " + e.message;
+      }
+    }
+  };
 
-<div class="card"><h3>📋 Historial</h3><div id="lista"></div><button class="btn-w" id="btnExportar">📤 Exportar a Excel / Copiar</button><button class="btn-r" id="btnBorrarTodo">🗑️ Borrar todo</button></div>
-</div>
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      loginBox.classList.add('hidden');
+      appBox.classList.remove('hidden');
+      document.getElementById('userName').textContent = "Hola, " + (user.displayName || user.email);
+      cargar();
+    } else {
+      loginBox.classList.remove('hidden');
+      appBox.classList.add('hidden');
+    }
+  });
 
-<script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  // Revisar si viene de redirect
+  auth.getRedirectResult().catch(e => {
+    if(e && e.code) msg.textContent = "Error: " + e.message;
+  });
 
-const firebaseConfig={apiKey:"AIzaSyBtE7xSCMKB5jgW3yXv7YwAEVvLDW4RL1w",authDomain:"mi-ruta-eb2c3.firebaseapp.com",projectId:"mi-ruta-eb2c3",storageBucket:"mi-ruta-eb2c3.firebasestorage.app",messagingSenderId:"252338478970",appId:"1:252338478970:web:9fc6aabbd0fcb6d0bdc0c3",measurementId:"G-1FSD4BBM3V"};
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app); const db=getFirestore(app);
-const provider=new GoogleAuthProvider();
-let cargas=[]; let unsub=null;
+  document.getElementById('btnGuardar').onclick = async () => {
+    const km = parseFloat(document.getElementById('km').value);
+    const litros = parseFloat(document.getElementById('litros').value);
+    const precio = parseFloat(document.getElementById('precio').value) || 0;
+    if(!km || !litros){ alert("Poné km y litros"); return; }
+    const consumo = (litros / km * 100).toFixed(2);
+    await db.collection('viajes').add({
+      uid: auth.currentUser.uid,
+      km, litros, precio, consumo: parseFloat(consumo),
+      fecha: new Date()
+    });
+    document.getElementById('km').value="";
+    document.getElementById('litros').value="";
+    document.getElementById('precio').value="";
+    cargar();
+  };
 
-document.getElementById('fecha').valueAsDate=new Date();
-document.getElementById('btnGoogle').onclick=async()=>{try{await signInWithPopup(auth,provider)}catch(e){await signInWithRedirect(auth,provider)}};
-document.getElementById('btnSalir').onclick=()=>signOut(auth);
-getRedirectResult(auth).catch(()=>{});
+  async function cargar(){
+    const snap = await db.collection('viajes').where('uid','==',auth.currentUser.uid).orderBy('fecha','desc').limit(20).get();
+    let html = "";
+    snap.forEach(d=>{
+      const v = d.data();
+      html += `<div class="item"><b>${v.km} km</b> - ${v.litros} L - <b>${v.consumo} L/100km</b>${v.precio?` - $${(v.precio*v.litros).toFixed(0)}`:''}</div>`;
+    });
+    document.getElementById('lista').innerHTML = html || "<p class='small'>Todavía no hay viajes</p>";
+  }
 
-onAuthStateChanged(auth,(user)=>{
- if(!user){document.getElementById('login').style.display='block';document.getElementById('app').style.display='none';return;}
- document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';
- document.getElementById('emailShow').textContent=user.email; document.getElementById('userInfo').textContent=user.email;
- // Migrar datos viejos del celu si hay
- const viejos=localStorage.getItem('miRutaViejo');
- if(viejos && !localStorage.getItem('migrado')){
-   try{JSON.parse(viejos).forEach(async c=>{await addDoc(collection(db,'usuarios',user.uid,'cargas'),c)}); localStorage.setItem('migrado','1'); alert('¡Recuperé tus cargas viejas del celu y las subí a la nube!');}catch(e){}
- }
- const q=query(collection(db,'usuarios',user.uid,'cargas'),orderBy('fecha','desc'));
- if(unsub) unsub();
- unsub=onSnapshot(q,(snap)=>{cargas=snap.docs.map(d=>({id:d.id,...d.data()}));render();});
-});
-
-document.getElementById('btnGuardar').onclick=async()=>{
- const km=Number(document.getElementById('km').value), litros=Number(document.getElementById('litros').value), total=Number(document.getElementById('total').value);
- const fecha=document.getElementById('fecha').value, estacion=document.getElementById('estacion').value;
- if(!km||!litros||!total){alert('Completá km, litros y total');return;}
- const user=auth.currentUser; if(!user){alert('Entrá con Google primero');return;}
- await addDoc(collection(db,'usuarios',user.uid,'cargas'),{fecha,km,litros,total,estacion,creado:Date.now()});
- document.getElementById('km').value='';document.getElementById('litros').value='';document.getElementById('total').value='';
- alert('✅ Guardado en la nube con tu Gmail');
-};
-
-function render(){
- let t=0,l=0, kmRec=0;
- cargas.forEach(c=>{t+=Number(c.total||0);l+=Number(c.litros||0)});
- if(cargas.length>1){let ord=[...cargas].sort((a,b)=>a.km-b.km); kmRec=ord[ord.length-1].km-ord[0].km;}
- document.getElementById('sTotal').textContent='$'+t.toLocaleString('es-AR');
- document.getElementById('sLitros').textContent=l.toFixed(1)+' L';
- document.getElementById('sKm').textContent=kmRec.toLocaleString('es-AR')+' km';
- document.getElementById('sCons').textContent=l>0?(kmRec/l).toFixed(2)+' km/L':'-';
- document.getElementById('lista').innerHTML=cargas.length?cargas.map(c=>`<div class="item"><div><b>${c.fecha} - ${c.estacion}</b><br><small>${c.km} km • ${c.litros} L • $${Number(c.total).toLocaleString('es-AR')} • ${(Number(c.total)/Number(c.litros)).toFixed(0)} $/L</small></div><button onclick="window.borrar('${c.id}')" style="width:auto;background:#ef4444;color:#fff;padding:8px;border-radius:8px;border:0">✕</button></div>`).join(''):'<p><small>Todavía no hay cargas. Agregá la primera.</small></p>';
-}
-window.borrar=async(id)=>{if(confirm('¿Borrar esta carga?')){await deleteDoc(doc(db,'usuarios',auth.currentUser.uid,'cargas',id))}};
-document.getElementById('btnExportar').onclick=()=>{let txt='Fecha,Km,Litros,Total,Estacion\n'+cargas.map(c=>`${c.fecha},${c.km},${c.litros},${c.total},${c.estacion}`).join('\n'); navigator.clipboard.writeText(txt); alert('Copiado! Pegalo en Excel o en WhatsApp.');};
-document.getElementById('btnBorrarTodo').onclick=async()=>{if(!confirm('¿Borrar TODO?'))return; for(let c of cargas){await deleteDoc(doc(db,'usuarios',auth.currentUser.uid,'cargas',c.id))}};
-</script></body></html>
+  document.getElementById('btnSalir').onclick = () => auth.signOut();
+</script>
+</body>
+</html>
